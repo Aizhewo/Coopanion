@@ -175,7 +175,7 @@ Speech is recognized on your machine and audio is never uploaded: by **FunASR** 
 
 - **Click** to poke it, **move back and forth over its head** to pat it, **press and drag** to pick it up; let go mid-swing to throw it. By default a poke makes Coo respond, and pats and pick-ups are passed on the next time it wakes. **Response mode** in Habits changes this: Quiet keeps every touch until you next talk to Coo, Eager responds to every touch, Custom… picks the touches that get a response right away.
 - **Expressions and motions**: Coo pairs what it says with a face and a motion. Faces: happy, wink, love, shy, surprised, angry, sad, sleepy, thinking, smug, pout, worried, determined, flustered, scared, excited (starry eyes), crying, confused. Motions include nod, shake, look around, turn, spin, jump, sit, sleep, wave, bow, shiver, flap, dance. As the DeepSeek Whale, a nod really dips the head and a shake turns the face, a wave raises the arm nearer you, and a bow tips the upper body forward.
-- **Right-click** for the menu: pause / resume, settings, quit, plus typing, voice input, walking, night mode, sounds, dress up and hide.
+- **Right-click** for the menu: pause / resume, settings, quit, plus typing, voice input, night mode, sounds, hide and dress up.
 - **Hover buttons**: the buttons beside Coo while the pointer rests on it. Typing and voice by default; pick up to six in Habits.
 - **Remember where Coo stands**: turn it on in Habits and Coo returns to the same spot across the screen on the next start.
 - **Several displays**: Coo starts on the main display. Carry it to another display and let go to move it there. If that display is unplugged, Coo returns to the main one.
@@ -207,7 +207,7 @@ Click the tray icon, or right-click Coo and click the gear. The window opens in 
 
 | Page          | What is there                                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Start         | Connect a model (the connected one and the other providers in one place), show or hide the pet on the desktop, preview the pet, pick a color scheme or edit its palette, rerun the guide. The bottom left says Running / Paused, beside pause / resume and shut down. |
+| Start         | Connect a model (the connected one and the other model services in one place), show or hide the pet on the desktop, preview the pet, pick the interface colors or edit their palette, rerun the guide. The bottom left says Running / Paused, beside pause / resume and shut down. |
 | Habits        | In sections: General (app language, your name, anonymous usage statistics), Behavior (walking, how Coo responds, what Coo may change by itself, hover buttons, double-click to type, status bubble), Display (size, frame rate, hide in full screen on Windows, remember position), Sounds (each kind can be turned off), Computer use (on/off, mouse and keyboard, when to ask you, how long a yes lasts) |
 | Dress up      | Figure (Coo, the DeepSeek Whale or an installed figure pack), colors and accessories; changes apply at once. **Import** at the end of the figure row installs packs from a zip or a folder (up to 128 MB at a time); dropping one on the page works too |
 | Voice input   | On/off, recognizer, model download, talk key, microphone, listening mode                                          |
