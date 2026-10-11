@@ -3,6 +3,8 @@
  * at the bottom of the screen, one step at a time in its bubble (the desktop-pet World's
  * `dialog`); no window opens:
  *
+ * 0. the app language, asked in English with each language under its own name and the language in force
+ *    picked (the system's on a first start); the rest speaks the one picked;
  * 1. hello, what to call the person (the desktop-pet World's `user`), and where they heard of
  *    Coopanion (for the usage statistics; one of the buttons skips it);
  * 2. how lively to be (`roam`): while the cards are up Coo shows each one, standing still,
@@ -27,8 +29,8 @@
  * talks to Coo without one, Coo asks whether to connect a model now.
  */
 import { existsSync, writeFileSync } from 'node:fs';
-import type { Language } from 'cortico/core/language.ts';
-import type { DesktopPetWorld, PetDialog, PetDialogAnswer } from 'cortico-world-desktop-pet';
+import { LANGUAGES, LANGUAGE_NAMES, type Language } from 'cortico/core/language.ts';
+import type { DesktopPetWorld, PetDialog, PetDialogAnswer, PetDialogHandle } from 'cortico-world-desktop-pet';
 import { USER_MAX, capFor, petText } from 'cortico-world-desktop-pet';
 import { VENDOR_ICONS, defaultRegion, localized, siteOf, vendorName, vendorsFor, type Region, type Vendor } from 'cortico-provider-coo';
 import { connectVendor, currentConnection, type ConsoleCall } from 'cortico-provider-coo/src/connect.ts';
@@ -36,6 +38,8 @@ import { coreText } from './i18n/index.ts';
 import type { ModelLanguage } from './language.ts';
 
 const PET_GROUP = 'world:desktop-pet';
+/** The app's own settings group, where the app language is (`language`), as the 「习惯」 page saves it. */
+const APP_GROUP = 'companion';
 const USER_KEY = 'worlds.desktop-pet.user';
 const ROAM_KEY = 'worlds.desktop-pet.roam';
 const WAKE_KEY = 'worlds.desktop-pet.touch.wakeOn';
@@ -48,8 +52,18 @@ const OLD_DEFAULT_USERS = ['伙伴', '主人'];
 const MOTIONS = { off: 'still', calm: 'walk', free: 'run' } as const;
 /** Sentence-ending marks a reason comes with, taken off before it goes into a line of the introduction. */
 const trimEnd = (text: string) => text.replace(/[\s.!?。．！？]+$/, '');
-/** Numbered steps, for the dots at the top of the bubble. */
-const STEPS = 6;
+/** Steps, for the dots at the top of the bubble: the language page (step 0) and the six numbered ones. */
+const STEPS = 7;
+/**
+ * The language page's words: English, the language the most people who start Coopanion read, before any
+ * line in the language they pick. Not in core/i18n, since they never follow the app language.
+ */
+const LANGUAGE_PAGE = { ask: 'First things first: which language would you like?', ok: 'Continue' };
+/** A language's card: its name, and the region in its name (「Español (Latinoamérica)」) on a smaller second line, so it fits the card. */
+const languageCard = (code: Language) => {
+  const [, name, region] = /^(.*?)\s*\((.+)\)$/.exec(LANGUAGE_NAMES[code]) ?? [];
+  return name && region ? { label: name, note: region } : { label: LANGUAGE_NAMES[code] };
+};
 /** How often a step waiting for the pet page looks again, and a download for its progress. */
 const POLL_MS = 500;
 
@@ -150,6 +164,8 @@ function talker(pet: () => DesktopPetWorld | null) {
 
 /** A service's logo as a data URL for a card in the bubble. */
 const logo = (v: Vendor) => `data:image/svg+xml;base64,${Buffer.from(VENDOR_ICONS[v.id] ?? '').toString('base64')}`;
+/** The 「more」 card's picture: a plus drawn like the logos (the page sets it on the same white tile), so the card lines up with them. */
+const MORE_ICON = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>').toString('base64')}`;
 
 /**
  * The service picked on the cards: the services for `language`, and a last card that shows the
@@ -165,7 +181,7 @@ async function pickVendor(show: (d: PetDialog, at: string) => Promise<PetDialogA
       ...ask,
       input: {
         kind: 'choices', confirm: S.vendorOk, value: Math.max(0, list.indexOf(current ?? list[0]!)),
-        options: [...list.map((v) => ({ label: vendorName(v, language), image: logo(v) })), ...(folded ? [{ label: S.moreVendors }] : [])],
+        options: [...list.map((v) => ({ label: vendorName(v, language), image: logo(v) })), ...(folded ? [{ label: S.moreVendors, image: MORE_ICON }] : [])],
       },
     }, 'vendor');
     if ('closed' in picked) throw new Closed();
@@ -220,11 +236,14 @@ const keyInput = (v: Vendor, region: Region, language: Language, later: string):
 });
 
 let running = false;
+/** askForKey's bubble while it is up; the introduction closes it when it starts. */
+let asking: PetDialogHandle | null = null;
 
 /** Runs the introduction; a second call while it runs does nothing. */
 export async function runGuide(deps: GuideDeps): Promise<void> {
   if (running) return;
   running = true;
+  asking?.close();
   const t = talker(deps.pet);
   const call = api(deps.console, deps.language);
   let reached = 0;
@@ -235,7 +254,8 @@ export async function runGuide(deps: GuideDeps): Promise<void> {
   const step = (n: number, line: string, d: PetDialog): Promise<PetDialogAnswer> => {
     if (n > reached) { reached = n; deps.track?.('guide_step', { step: n }); }
     at = line;
-    return t.show({ ...d, step: [n, STEPS], closable: true }).then((a) => {
+    // step 0, the language page, is the first dot; the numbers the statistics count (guide_step) stay as they were
+    return t.show({ ...d, step: [n + 1, STEPS], closable: true }).then((a) => {
       transcript.push(...noteStep(d, a, deps.modelLanguage?.() ?? 'zh'));
       if ('closed' in a) throw new Closed();
       return a;
@@ -245,7 +265,16 @@ export async function runGuide(deps: GuideDeps): Promise<void> {
     // a moment for Coo to land after the window opens
     while (!t.connected()) await sleep(POLL_MS);
     await sleep(1800);
-    // the language the introduction started in holds to its end
+    // 0 the language
+    const current = deps.language();
+    const l = await step(0, 'language', {
+      text: LANGUAGE_PAGE.ask, actions: ['happy'],
+      input: { kind: 'choices', confirm: LANGUAGE_PAGE.ok, value: LANGUAGES.indexOf(current), options: LANGUAGES.map(languageCard) },
+    });
+    const picked = 'index' in l ? LANGUAGES[l.index]! : current;
+    // the config API writes the live config before it answers; a failed write leaves the language as it was
+    if (picked !== current) await call('/api/config', { group: APP_GROUP, values: { language: picked } }).catch(() => {});
+    // the language picked holds to the introduction's end
     const language = deps.language();
     const S = lines(language);
     const defaultName = petText(language).defaultUser;
@@ -301,7 +330,7 @@ export async function runGuide(deps: GuideDeps): Promise<void> {
     const k = await currentConnection(call);
     if (k.ready) await step(4, 'key-ready', { text: S.keyAlready([k.vendor ? vendorName(k.vendor, language) : '', k.model].filter(Boolean).join(' · ')), actions: ['happy'] });
     else {
-      const ask: Omit<PetDialog, 'input'> = { text: S.askVendor(vendorName(vendorsFor(language).shown[0]!, language)), actions: ['thinking'], step: [4, STEPS] };
+      const ask: Omit<PetDialog, 'input'> = { text: S.askVendor(vendorName(vendorsFor(language).shown[0]!, language)), actions: ['thinking'], step: [5, STEPS] };
       const vendor = await connectLoop((d, line) => step(4, line, d), call, deps.pet, ask, S.keyLater, language);
       if (vendor) deps.track?.('model_connected', { via: 'guide', vendor: vendor.id });
       else await step(4, 'key-later', { text: S.keySkipped, actions: ['sad'] });
@@ -316,7 +345,7 @@ export async function runGuide(deps: GuideDeps): Promise<void> {
         input: { kind: 'buttons', options: [{ label: S.download, primary: true }, { label: S.notNow }] },
       });
       if ('index' in d && d.index === 0) {
-        const bar = deps.pet()?.dialog({ text: S.downloading, step: [5, STEPS], input: { kind: 'progress', label: `${mb} MB` } });
+        const bar = deps.pet()?.dialog({ text: S.downloading, step: [6, STEPS], input: { kind: 'progress', label: `${mb} MB` } });
         void deps.pet()?.installVoice();
         for (;;) {
           await sleep(POLL_MS);
@@ -386,26 +415,55 @@ export async function askForKey(deps: Pick<GuideDeps, 'pet' | 'console' | 'track
   const call = api(deps.console, deps.language);
   let lastAsk = Date.now() - ASK_AGAIN_MS + firstAfterMs;
   let asked = false;
+  /**
+   * Its bubbles step aside for the introduction (the console's 「使用向导」 can start it while one is up): none
+   * opens while it runs, and runGuide closes the one up; either way the ask ends with Closed.
+   */
+  const show = async (d: PetDialog): Promise<Exclude<PetDialogAnswer, { unavailable: true }>> => {
+    for (;;) {
+      while (!running && !t.connected()) await sleep(POLL_MS);
+      if (running) throw new Closed();
+      asking = deps.pet()!.dialog(d);
+      const a = await asking.answer;
+      asking = null;
+      if (running) throw new Closed();
+      if (!('unavailable' in a)) return a;
+      await sleep(POLL_MS);
+    }
+  };
   const connect = async (text: string, via: string) => {
-    const vendor = await connectLoop(t.show, call, deps.pet, { text, actions: ['thinking'], closable: true }, lines(deps.language()).askLater, deps.language()).catch(() => null);
+    // a failed call ends this ask only; the introduction taking over ends it too, and the loop waits for it
+    const vendor = await connectLoop(show, call, deps.pet, { text, actions: ['thinking'], closable: true }, lines(deps.language()).askLater, deps.language())
+      .catch((err: unknown) => { if (err instanceof Closed) throw err; return null; });
     if (vendor) deps.track?.('model_connected', { via, vendor: vendor.id });
   };
   while (!keySet()) {
     const ready = t.connected() && !running;
     const S = lines(deps.language());
-    if (ready && talked()) {
-      const a = await t.show({
-        text: S.noModel, actions: ['thinking'], closable: true,
-        input: { kind: 'buttons', options: [{ label: S.noModelGo, primary: true }, { label: S.noModelLater }] },
-      });
-      const go = 'index' in a && a.index === 0;
-      deps.track?.('key_prompt', { answer: go ? 'connect' : 'later' });
-      if (go) await connect(S.askVendor(vendorName(vendorsFor(deps.language()).shown[0]!, deps.language())), 'prompt');
-    } else if (ready && Date.now() - lastAsk >= ASK_AGAIN_MS) {
-      await connect(asked ? S.askAgain : S.askFirst, 'ask');
-    } else {
-      await sleep(KEY_POLL_MS);
-      continue;
+    try {
+      if (ready && talked()) {
+        const a = await show({
+          text: S.noModel, actions: ['thinking'], closable: true,
+          input: { kind: 'buttons', options: [{ label: S.noModelGo, primary: true }, { label: S.noModelLater }] },
+        });
+        const go = 'index' in a && a.index === 0;
+        deps.track?.('key_prompt', { answer: go ? 'connect' : 'later' });
+        if (go) await connect(S.askVendor(vendorName(vendorsFor(deps.language()).shown[0]!, deps.language())), 'prompt');
+      } else if (ready && Date.now() - lastAsk >= ASK_AGAIN_MS) {
+        await connect(asked ? S.askAgain : S.askFirst, 'ask');
+      } else {
+        await sleep(KEY_POLL_MS);
+        continue;
+      }
+    } catch (err) {
+      if (!(err instanceof Closed)) throw err;
+      // the introduction took over (it asks for the key itself): the next ask waits a full while after it;
+      // closed by the person, it counts as an ask like any other
+      if (running) {
+        while (running) await sleep(KEY_POLL_MS);
+        lastAsk = Date.now();
+        continue;
+      }
     }
     asked = true;
     lastAsk = Date.now();
