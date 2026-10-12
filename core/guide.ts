@@ -59,11 +59,8 @@ const STEPS = 7;
  * line in the language they pick. Not in core/i18n, since they never follow the app language.
  */
 const LANGUAGE_PAGE = { ask: 'First things first: which language would you like?', ok: 'Continue' };
-/** A language's card: its name, and the region in its name (「Español (Latinoamérica)」) on a smaller second line, so it fits the card. */
-const languageCard = (code: Language) => {
-  const [, name, region] = /^(.*?)\s*\((.+)\)$/.exec(LANGUAGE_NAMES[code]) ?? [];
-  return name && region ? { label: name, note: region } : { label: LANGUAGE_NAMES[code] };
-};
+/** A language's card: its name without the region in it (「Español (Latinoamérica)」), as the only Spanish and the only Portuguese offered. */
+const languageCard = (code: Language) => ({ label: LANGUAGE_NAMES[code].replace(/\s*\(.+\)$/, '') });
 /** How often a step waiting for the pet page looks again, and a download for its progress. */
 const POLL_MS = 500;
 

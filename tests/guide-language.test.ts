@@ -45,9 +45,10 @@ describe('the introduction asks for the language first', () => {
     expect(first.input?.kind).toBe('choices');
     expect(first.input?.kind === 'choices' && first.input.value).toBe(LANGUAGES.indexOf('ja'));
     expect(first.text).toMatch(/language/);
-    // a region in the name goes on the card's smaller second line
+    // a region in the name is left off the card
     const options = first.input?.kind === 'choices' ? first.input.options : [];
-    expect(options[LANGUAGES.indexOf('es-419')]).toEqual({ label: 'Español', note: 'Latinoamérica' });
+    expect(options[LANGUAGES.indexOf('es-419')]).toEqual({ label: 'Español' });
+    expect(options[LANGUAGES.indexOf('pt-BR')]).toEqual({ label: 'Português' });
     expect(options[LANGUAGES.indexOf('en')]).toEqual({ label: 'English' });
     expect(saved).toContainEqual({ group: 'companion', values: { language: 'zh' } });
     // the next line, the hello, is in the language picked, and the dots moved on by one
