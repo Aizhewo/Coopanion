@@ -1,7 +1,7 @@
 /**
  * 「开始」: the app's home page. Everything the first minutes need on one page, top to bottom in
  * the order it is needed: the model service and its key, then the pet, then the console's color
- * scheme (appearance.ts). The model card is one view:
+ * scheme (features/schemes). The model card is one view:
  * the service in use on the first row (with 「测试连接」), every other one on the second (in the order
  * for the console's language; outside Chinese the services that take mainland China accounts only
  * behind a More button); the picked one's model and key boxes are below, and 「保存并开始」 saves the
@@ -15,12 +15,12 @@
  * for it). Saving and testing the key lives in model.ts. Every control calls an endpoint the rest of
  * the console already uses. Styles are in home.css, which scripts/stage.ts adds to the console stylesheet.
  */
-import { post } from '../../core/api.ts';
-import { LANGUAGE } from '../../core/language.ts';
-import type { FeatureContext, FrameworkFeature } from '../feature.ts';
+import { invokePanel } from '../../base/api.ts';
+import { LANGUAGE } from '../../base/language.ts';
+import type { Page, PageContext } from '../../base/page.ts';
 import { intro } from '../intro.ts';
 import { revealWhenPainted } from '../frame-reveal.ts';
-import { mountSchemes } from './appearance.ts';
+import { schemesCard } from '../schemes/index.ts';
 import { readMode, requestMode } from '../mode.ts';
 import {
   connectVendor, consoleCall, defaultRegion, localized, locate, readStatus, regionsOf, siteOf, testEndpoint, VENDOR_ICONS, vendorName, vendorsFor,
@@ -41,16 +41,15 @@ const PREVIEW_MIN = 180;
 const PREVIEW_MAX = 560;
 const PREVIEW_GAP = 20;
 
-const panelPath = (page: string, panel: string, method: string) => `/api/console/providers/${encodeURIComponent(page)}/panels/${panel}/${method}`;
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-async function mount(ctx: FeatureContext): Promise<void> {
+async function mount(ctx: PageContext): Promise<void> {
   const { ui, root, signal } = ctx;
   const opts = { signal };
   root.classList.add('home');
 
   /* ---------- heading ---------- */
-  const guide = ui.button(S.guide, { size: 'sm', onClick: () => { void post(panelPath(PET_PAGE, 'pet', 'guide'), { args: [] }, opts).catch((err) => ui.toast(String(err instanceof Error ? err.message : err))); } });
+  const guide = ui.button(S.guide, { size: 'sm', onClick: () => { void invokePanel(PET_PAGE, 'pet', 'guide', [], opts).catch((err) => ui.toast(String(err instanceof Error ? err.message : err))); } });
   guide.title = S.guideHint;
   root.append(intro(ui, S.nav, { actions: [guide] }));
 
@@ -278,7 +277,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
   let petState: PetState | null = null;
   const refreshPet = async () => {
     try {
-      petState = await post<PetState>(panelPath(PET_PAGE, 'pet', 'state'), { args: [] }, opts);
+      petState = await invokePanel<PetState>(PET_PAGE, 'pet', 'state', [], opts);
     } catch { petState = null; }
     const onDesktop = petState?.onDesktop === true;
     petPill.textContent = onDesktop ? S.petShown : S.petHidden;
@@ -290,7 +289,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
       preview.src = petState.url;
     }
   };
-  const petCall = (method: string) => post(panelPath(PET_PAGE, 'pet', method), { args: [] }, opts).catch(() => null);
+  const petCall = (method: string) => invokePanel(PET_PAGE, 'pet', method, [], opts).catch(() => null);
   showPet.addEventListener('click', async () => {
     // a hidden window comes back by opening it again
     await petCall('closeWindow');
@@ -304,16 +303,15 @@ async function mount(ctx: FeatureContext): Promise<void> {
   dress.addEventListener('click', () => ctx.router.navigate(['dress']));
 
   /* ---------- color scheme ---------- */
-  root.append(mountSchemes(ctx));
+  root.append(schemesCard(ctx, S.schemeTitle));
 
   await Promise.all([refreshModel(), refreshPet()]);
   ctx.lifecycle.interval(() => { void refreshModel(); void refreshPet(); }, 2000);
 }
 
-export const homeFeature: FrameworkFeature = {
+export const homePage: Page = {
   route: 'home',
   label: S.nav,
   icon: 'play',
-  navMode: 'primary',
   mount,
 };

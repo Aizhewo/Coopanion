@@ -20,8 +20,8 @@
  * `setWakeKinds` and `setSelfAdjustCustom`, which set the mode to `custom` in the same write.
  */
 import { ICONS } from 'cortico-world-desktop-pet/web/ui.js';
-import { get, post, setConfig } from '../../core/api.ts';
-import type { FeatureContext, FrameworkFeature } from '../feature.ts';
+import { get, invokePanel, setConfig } from '../../base/api.ts';
+import type { Page, PageContext } from '../../base/page.ts';
 import { intro } from '../intro.ts';
 import { cuaSection } from '../cua/index.ts';
 import { scaleSlider } from './scale-slider.ts';
@@ -35,9 +35,8 @@ const STATS_DOC = 'https://github.com/Pal-AI-Lab/Coopanion/blob/main/docs/TELEME
 /** The app language: a key of the `companion` group, its choices from the Core. */
 const LANGUAGE_KEY = 'language';
 const LANGUAGE_OPTIONS = '/api/config/options/coopanion.language';
-/** The pet panel's methods: `state` gives the default name for the person in the app language and the two rows below. */
-const PET_PANEL = '/api/console/providers/world%3Adesktop-pet/panels/pet/';
-const PET_STATE = `${PET_PANEL}state`;
+/** The pet panel's page: its `state` gives the default name for the person in the app language and the two rows below. */
+const PET_PAGE = 'world:desktop-pet';
 const K = 'worlds.desktop-pet';
 const KEYS = {
   user: `${K}.user`,
@@ -94,7 +93,7 @@ const SCALE_SEND_MS = 80;
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-async function mount(ctx: FeatureContext): Promise<void> {
+async function mount(ctx: PageContext): Promise<void> {
   const { ui, root, signal } = ctx;
   const opts = { signal };
   root.classList.add('home');
@@ -112,7 +111,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
     if (current) language.value = current;
   }).catch(() => {});
   const user = ui.input();
-  void post<{ defaultUser?: string }>(PET_STATE, { args: [] }, opts).then((s) => { if (s?.defaultUser) user.placeholder = s.defaultUser; }).catch(() => {});
+  void invokePanel<{ defaultUser?: string }>(PET_PAGE, 'pet', 'state', [], opts).then((s) => { if (s?.defaultUser) user.placeholder = s.defaultUser; }).catch(() => {});
   const roam = ui.segmented([
     { value: 'free', label: S.roamFree }, { value: 'calm', label: S.roamCalm }, { value: 'off', label: S.roamOff },
   ], { size: 'sm', onSelect: (v) => void save(KEYS.roam, v, GROUP, behaviorMsg) });
@@ -365,7 +364,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
   /** Calls a pet panel method (回应模式, 自主配置权限); a failure shows under 行为与互动, and the rows follow the state it returns. */
   const callPet = async (method: string, args: unknown[]) => {
     try {
-      const state = await post<HabitState>(PET_PANEL + method, { args }, opts);
+      const state = await invokePanel<HabitState>(PET_PAGE, 'pet', method, args, opts);
       takeHabits(state);
       behaviorMsg.textContent = '';
       behaviorMsg.classList.remove('bad');
@@ -407,7 +406,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
 
   const refreshValues = async () => {
     // with the OBS overlay page while it is exported
-    const habitState = post<HabitState & { overlayUrl?: string | null }>(PET_STATE, { args: [] }, opts).catch(() => null);
+    const habitState = invokePanel<HabitState & { overlayUrl?: string | null }>(PET_PAGE, 'pet', 'state', [], opts).catch(() => null);
     let values: Record<string, unknown> = {};
     let soundValues: Record<string, unknown> = {};
     let statsValues: Record<string, unknown> = {};
@@ -463,10 +462,9 @@ async function mount(ctx: FeatureContext): Promise<void> {
   ctx.lifecycle.interval(() => void refreshValues(), 3000);
 }
 
-export const petFeature: FrameworkFeature = {
+export const petPage: Page = {
   route: 'pet',
   label: S.nav,
   icon: 'bot',
-  navMode: 'primary',
   mount,
 };

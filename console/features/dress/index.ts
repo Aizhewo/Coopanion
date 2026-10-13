@@ -7,10 +7,10 @@
  * writes the deployment's theme.json); while this page is open it reads that record every
  * `THEME_POLL_MS` and applies it when the scheme or mode differs from what the window shows.
  */
-import { get, post } from '../../core/api.ts';
-import type { FeatureContext, FrameworkFeature } from '../feature.ts';
-import { applyStoredTheme, disposeThemeStudio, getThemeStudio } from '../../theme/studio.ts';
-import type { InjectedTheme } from '../../../shared/theme.ts';
+import { invokePanel } from '../../base/api.ts';
+import type { Page, PageContext } from '../../base/page.ts';
+import { applyStoredTheme, disposeThemeStudio, getThemeStudio } from '../../base/theme/studio.ts';
+import { fetchTheme } from '../../base/theme/storage.ts';
 import { intro } from '../intro.ts';
 import { revealWhenPainted } from '../frame-reveal.ts';
 import { S } from './strings.ts';
@@ -19,9 +19,8 @@ const PET_PAGE = 'world:desktop-pet';
 /** How often the open page reads the theme record, one local request each time. */
 const THEME_POLL_MS = 1000;
 
-const panelPath = (method: string) => `/api/console/providers/${encodeURIComponent(PET_PAGE)}/panels/pet/${method}`;
 
-async function mount(ctx: FeatureContext): Promise<void> {
+async function mount(ctx: PageContext): Promise<void> {
   const { ui, root, signal } = ctx;
   root.classList.add('home');
 
@@ -52,7 +51,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
   const refresh = async () => {
     let url: string | null = null;
     try {
-      url = (await post<{ dressUrl: string | null }>(panelPath('state'), { args: [] }, { signal }))?.dressUrl ?? null;
+      url = (await invokePanel<{ dressUrl: string | null }>(PET_PAGE, 'pet', 'state', [], { signal }))?.dressUrl ?? null;
     } catch { url = null; }
     frame.hidden = !url;
     note.hidden = !!url;
@@ -68,7 +67,7 @@ async function mount(ctx: FeatureContext): Promise<void> {
   };
 
   const followTheme = async () => {
-    const injected = await get<InjectedTheme>('/api/theme', { signal }).catch(() => null);
+    const injected = await fetchTheme(signal).catch(() => null);
     const theme = injected?.theme;
     if (!injected || !theme || signal.aborted) return;
     const shown = getThemeStudio().snapshot();
@@ -83,10 +82,9 @@ async function mount(ctx: FeatureContext): Promise<void> {
   ctx.lifecycle.interval(() => void followTheme(), THEME_POLL_MS);
 }
 
-export const dressFeature: FrameworkFeature = {
+export const dressPage: Page = {
   route: 'dress',
   label: S.nav,
   icon: 'shirt',
-  navMode: 'primary',
   mount,
 };

@@ -214,7 +214,7 @@ Click the tray icon, or right-click Coo and click the gear. The window opens in 
 | Habits        | In sections: General (app language, your name, anonymous usage statistics), Behavior (walking, how Coo responds, what Coo may change by itself, hover buttons, double-click to type, status bubble), Display (size, frame rate, hide in full screen on Windows, remember position), Sounds (each kind can be turned off), Computer use (on/off, mouse and keyboard, when to ask you, how long a yes lasts), Other (OBS overlay) |
 | Dress up      | Figure (Coo, the DeepSeek Whale or an installed figure pack), colors and accessories; changes apply at once. **Import** at the end of the figure row installs packs from a zip or a folder (up to 128 MB at a time); dropping one on the page works too |
 | Voice input   | On/off, recognizer, model download, talk key, microphone, listening mode                                          |
-| System prompt | Coo's system prompt; the persona is the CONSTITUTION section. Save with Ctrl+S and apply with **Reload current session**; **Clear and restart** drops the current conversation |
+| System prompt | Coo's persona (CONSTITUTION). **Save** or Ctrl+S saves it, and it applies from the next session; **Clear and restart** drops the current conversation and starts again from the current prompt. In advanced mode the page shows the whole system prompt, and **Reload current session** applies it at once |
 | Usage & cost  | Tokens used and money spent per day                                                                               |
 | Chat          | The current conversation, with the images Coo shows; you can also talk to Coo from here                           |
 
@@ -223,7 +223,7 @@ Click the tray icon, or right-click Coo and click the gear. The window opens in 
 
 The expanded sidebar shows the current version at the top left, with a download link below it when a newer release is out. The Windows build and the AppImage download new versions in the background; Coo then asks in its bubble whether to restart and update, or the update installs the next time you quit. If a download stalls, get it from GitHub yourself. On Mac and with the deb, download new versions by hand. After an update, Coo tells you what the new version brings; when you change what it calls you, its dress, walking, computer use or similar settings here, it hears about it and responds.
 
-**Advanced mode** at the bottom left shows every page (Worlds, models, extensions, memory, diagnostics); **Back to normal mode** hides them again. In normal mode, expand the sidebar to show the Advanced mode button.
+**Advanced mode** at the bottom left shows every page (Worlds, models, extensions, memory, terminal and diagnostics); **Back to normal mode** hides them again. In normal mode, expand the sidebar to show the Advanced mode button.
 
 ### Changing the model
 
