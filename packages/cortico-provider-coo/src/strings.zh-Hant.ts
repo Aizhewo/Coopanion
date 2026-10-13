@@ -6,4 +6,11 @@ export const cooText: Partial<typeof en> = {
   protocol: '協定',
   protocolHint: '留空時，列出的服務使用它自己的協定，其他位址使用 responses。responses：POST <位址>/responses；chat：POST <位址>/chat/completions；anthropic：Messages API，位址填 /v1 之前的部分；gemini：Gemini API，位址填 /models 之前的部分。',
   badProtocol: (protocols: string) => `協定只能是 ${protocols}`,
+  chatgpt: {
+    panel: 'ChatGPT 帳號',
+    description: '以 ChatGPT 帳號登入，請求計入該帳號的 ChatGPT 方案用量。',
+    signedOut: '未登入 ChatGPT',
+    returnToApp: '登入結果會在應用程式裡顯示，可以關閉這個頁面。',
+    reasons: { access_denied: '沒有同意授權', plan_not_granted: '這個帳號沒有授權使用 ChatGPT 方案', timeout: '瀏覽器裡的登入逾時了' },
+  },
 };

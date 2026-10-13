@@ -8,6 +8,9 @@ import { LANGUAGE } from '../../../base/language.ts';
 import { pricingEditor } from '../../console-pages/builtins/llm-settings/pricing-panel.ts';
 import type { Disposable } from 'cortico/web/shared/client-panel.ts';
 import { S } from './strings.ts';
+import { CHATGPT_TEXT, accountRow, signOutBeforeDelete } from '../../../features/chatgpt/index.ts';
+import { CHATGPT_MODULE } from 'cortico-provider-coo/src/vendors.ts';
+import { SIGN_IN_PANEL } from 'cortico-provider-coo/src/connect.ts';
 
 export interface DetailController { dispose(): void; }
 interface Options {
@@ -119,8 +122,11 @@ export async function mountDetail(options: Options): Promise<DetailController> {
     field(body, 'baseUrl', S.url, editing.entry.baseUrl, value => { editing.entry.baseUrl = value; }, value => {
       try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? null : S.required; } catch { return S.required; }
     });
-    const key = field(body, 'key', S.key, editing.secretValue, value => { editing.secretValue = value; }, undefined, 'password');
-    key.placeholder = saved?.secretConfigured !== 'none' && saved ? '••••••••' : S.keyEmpty;
+    // a ChatGPT plan's endpoint is signed in (its own section) instead of taking a key
+    if (editing.entry.kind !== CHATGPT_MODULE) {
+      const key = field(body, 'key', S.key, editing.secretValue, value => { editing.secretValue = value; }, undefined, 'password');
+      key.placeholder = saved?.secretConfigured !== 'none' && saved ? '••••••••' : S.keyEmpty;
+    }
     const testResult = ui.msgline();
     const test = ui.button(S.test, { onClick: () => void (async () => {
       test.disabled = true;
@@ -290,8 +296,11 @@ export async function mountDetail(options: Options): Promise<DetailController> {
         const current = await get<Detail>(connectionPath(saved.name), opts);
         if (current.references.length) { await ui.confirm({ title: S.remove, body: S.referenced + current.references.join(', ') }); return; }
         if (!(await ui.confirm({ title: S.remove, body: S.deleteConfirm, danger: true }))) return;
+        if (saved.entry.kind === CHATGPT_MODULE && current.revision === saved.revision) await signOutBeforeDelete(saved.name, lifecycle.signal);
         await post(connectionPath(saved.name) + '/delete', { expectedRevision: saved.revision }, opts); await options.deleted();
-      }, ev.currentTarget as HTMLElement) }), ui.button(S.duplicate, { onClick: ev => run(() => options.duplicate({ original: null, copyFrom: { name: saved.name, revision: saved.revision }, name: (validateProviderName(saved.name) ? 'Connection' : saved.name) + '-Copy', entry: structuredClone(saved.entry), secretValue: '', raw: {} }), ev.currentTarget as HTMLElement) }));
+      }, ev.currentTarget as HTMLElement) }));
+      // a copy of a ChatGPT connection would share its refresh token, which each refresh replaces
+      if (saved.entry.kind !== CHATGPT_MODULE) actions.append(ui.button(S.duplicate, { onClick: ev => run(() => options.duplicate({ original: null, copyFrom: { name: saved.name, revision: saved.revision }, name: (validateProviderName(saved.name) ? 'Connection' : saved.name) + '-Copy', entry: structuredClone(saved.entry), secretValue: '', raw: {} }), ev.currentTarget as HTMLElement) }));
     }
     cancel = ui.button(S.cancel, { onClick: () => run(() => options.cancelled()) });
     cancel.hidden = !!saved && !dirty();
@@ -314,7 +323,11 @@ export async function mountDetail(options: Options): Promise<DetailController> {
           break;
         case 'connection-pricing': pricingBlock(box, section); break;
         case 'connection-protocol': protocolBlock(box, section, groups); break;
-        default: pending.push({ section, host: block(box, section, true) });
+        default:
+          // the ChatGPT module's sign-in section is drawn here; it ships no browser bundle
+          if (editing.entry.kind === CHATGPT_MODULE && section.id === SIGN_IN_PANEL)
+            block(box, section, true).append(saved ? accountRow(ui, saved.name, lifecycle.signal) : ui.msgline(CHATGPT_TEXT.saveFirst));
+          else pending.push({ section, host: block(box, section, true) });
       }
     }
     if (!pending.length || !ctx.consolePageHost) return;

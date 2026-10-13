@@ -407,6 +407,8 @@ core.on('ready', ({ language: next }) => {
 core.on('language', followLanguage);
 core.on('update-install', () => updater?.installNow());
 core.on('releases', () => void shell.openExternal(RELEASES_URL));
+// the ChatGPT sign-in page the introduction sends to the system browser; no other address is opened
+core.on('browse', (url) => { if (url.startsWith('https://auth.openai.com/')) void shell.openExternal(url); });
 core.on('state', (state, exit) => {
   if (!exit) return;
   const detail = exit.kind === 'locked' ? T().coreLocked(exit.pid, exit.file)
