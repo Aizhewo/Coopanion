@@ -335,7 +335,7 @@ export class DesktopPetWorld implements World {
   /** The talk key is down (hold) or was switched on (toggle). */
   private talking = false;
   private keyWatcher: KeyWatcher | null = null;
-  /** Why the talk key cannot be read; the gate then stays open as in `always`. */
+  /** Why the talk key cannot be read; the gate then stays closed. */
   private hotkeyProblem: string | null = null;
   private hotkeyKey = '';
   private level = -100;
@@ -861,7 +861,7 @@ export class DesktopPetWorld implements World {
       ready,
       detail: ready ? null : b?.phase === 'starting' ? this.ui.voice.starting : b?.detail ?? this.ui.voice.notRunning,
       hint: this.talkHint(),
-      mode: this.micMode(),
+      mode: this.cfg.asr.mic.mode,
       key: hotkeyBadge(this.cfg.asr.mic.hotkey),
     };
   }
@@ -1227,14 +1227,9 @@ export class DesktopPetWorld implements World {
 
   /* ---------- talk key ---------- */
 
-  /** The mode in force: hold and toggle fall back to always while the talk key cannot be read. */
-  private micMode(): MicMode {
-    return this.hotkeyProblem ? 'always' : this.cfg.asr.mic.mode;
-  }
-
   /** Audio reaches the segmenter only while this is true. */
   private gateOpen(): boolean {
-    return this.micMode() === 'always' || this.talking;
+    return this.cfg.asr.mic.mode === 'always' || this.talking;
   }
 
   /**
@@ -1243,7 +1238,7 @@ export class DesktopPetWorld implements World {
    */
   private segmentConfig(): SegmentConfig {
     const seg = this.cfg.asr.segment;
-    return this.micMode() === 'hold' ? { ...seg, thresholdDb: -Infinity, minSpeechMs: 0 } : seg;
+    return this.cfg.asr.mic.mode === 'hold' ? { ...seg, thresholdDb: -Infinity, minSpeechMs: 0 } : seg;
   }
 
   /** Starts, restarts or stops the key watcher to match the configured mode and key. */
@@ -1263,9 +1258,8 @@ export class DesktopPetWorld implements World {
     if (key !== this.hotkeyKey) { if (typeof watcher !== 'string') watcher.stop(); return; }
     if (typeof watcher === 'string') {
       this.hotkeyProblem = watcher;
-      this.log?.warn(`按键收音不可用,改为一直收音:${watcher}`);
+      this.log?.warn(`说话键不可用,暂不识别说话:${watcher}`);
     } else this.keyWatcher = watcher;
-    this.segmenter.configure(this.segmentConfig());
   }
 
   /** One line telling the person how to be heard. */
@@ -1273,8 +1267,9 @@ export class DesktopPetWorld implements World {
     const { hotkey } = this.cfg.asr.mic;
     const ui = this.ui, v = ui.voice;
     const key = comboLabel(hotkey, process.platform, ui), { taps } = splitTaps(hotkey);
-    const mode = this.micMode();
-    if (mode === 'always') return this.hotkeyProblem ? v.fallback(this.hotkeyProblem) : v.always;
+    const mode = this.cfg.asr.mic.mode;
+    if (mode === 'always') return v.always;
+    if (this.hotkeyProblem) return v.keyProblem(this.hotkeyProblem);
     if (mode === 'toggle') return taps > 1 ? v.toggleTaps(hotkeyLabel(hotkey, process.platform, ui), taps) : v.toggle(key);
     return taps > 1 ? v.holdTaps(key, taps) : v.hold(key);
   }
@@ -1286,7 +1281,7 @@ export class DesktopPetWorld implements World {
   }
 
   private onTalkKey(down: boolean): void {
-    if (this.micMode() === 'hold') this.setTalking(down);
+    if (this.cfg.asr.mic.mode === 'hold') this.setTalking(down);
     else if (down) this.setTalking(!this.talking);
   }
 
@@ -1314,7 +1309,7 @@ export class DesktopPetWorld implements World {
   private commitSpeech(): void {
     if (!this.cfg.asr.enabled || !this.micWanted()) return;
     this.committing = true;
-    if (this.micMode() === 'toggle' && this.talking) this.setTalking(false);
+    if (this.cfg.asr.mic.mode === 'toggle' && this.talking) this.setTalking(false);
     else {
       const tail = this.segmenter.flush();
       if (tail) this.enqueue(tail);
@@ -1843,7 +1838,6 @@ export class DesktopPetWorld implements World {
       mic: this.micState,
       input: {
         ...this.cfg.asr.mic,
-        effectiveMode: this.micMode(),
         hotkeyLabel: hotkeyLabel(this.cfg.asr.mic.hotkey, process.platform, this.ui),
         /** The keys alone, and how many presses (the last one held): for a key cap that shows the taps. */
         keyLabel: comboLabel(this.cfg.asr.mic.hotkey, process.platform, this.ui),
