@@ -71,6 +71,14 @@ World 进程退出后窗口在 2 秒内自己关掉。
 桌宠身后的屏幕颜色和身体相近时(比如浅色身体停在白色窗口前),身体背后会亮起一圈浅灰色的柔光:
 Windows 上每 0.8 秒用 GDI 取一小块身体周围的屏幕像素来比,其他系统读屏代价大,光圈一直亮着。
 
+人说的话留在 Coo 旁边(`web/pet-app.js`):打字框发出的、识别完成的语音、对话页发来的消息各成一个虚线气泡,最新的在最下面,
+放在 Coo 背朝的一侧并让开 Coo 的气泡;那侧放不下换到另一侧,两侧都放不下就放到 Coo 的气泡上方。识别完成的语音前面画话筒,对话页来的画双向箭头。
+一条话由它之后 Coo 开始的第一句说话或提问回答:回答的气泡还在时,或者还没回答而 Coo 在忙(有状态)、有说话在排队时,这条和更早的都不淡出;
+回答的气泡关掉 1 秒后淡出,没有回答的 8 秒后淡出。最多 3 条、合计 6 行,超出时最早的先淡出,即使还在等回答。点一下关掉一条,识别中的那条用「取消」。
+
+气泡尺寸 `worlds.desktop-pet.window.bubbleSize` 缩放所有气泡的宽度、留白、圆角、尾巴、离头顶的距离和连到桌宠的小圆点,边框粗细不变;
+字体尺寸 `window.fontSize` 缩放气泡里的字和同一行的小图标,气泡的宽度不变。两项都是 0.8–1.6 倍,默认 1,不随桌宠的大小变。
+
 用哪个 Electron,依次是:
 
 1. 环境变量 `CORTICO_DESKTOP_PET_HOST`:内嵌应用给的 JSON 数组命令,末尾追加 `--pet-url=<url>`。
@@ -137,7 +145,7 @@ overlay 页按画出的时刻显示各帧，帧与帧隔开的时间和桌宠页
 
 桌宠窗口里的页面用麦克风收音,16 kHz 单声道 PCM 经 WebSocket 送到 World,按能量门限切句
 (`src/asr/segmenter.ts`),交给识别引擎,挡掉已知幻觉后作为 `desktop-pet.speech` 投递;应用语言是简体中文且 `asr.simplified` 开着时先把繁体转成简体。
-说话时桌宠歪头倾听,虚线气泡里边说边显示听到的字,还没定下来的部分是灰色的;用 Whisper 时一句说完才出字。
+说话时桌宠歪头倾听,虚线气泡里边说边显示听到的字,还没定下来的部分是灰色的;用 Whisper 时一句说完才出字。识别完成后这个气泡留在 Coo 旁边(见「桌宠窗口」)。
 按键收音(`hold`、`toggle`)时气泡里有「取消」按钮:桌宠页发 `cancel`,World 丢掉这次收音手上的音频、转写队列和已识别的文字,在途的转写落地后也丢掉,发 `listen` 的 `none`,不投递事件;`toggle` 下同时关掉收音。
 
 识别引擎存在 `asr.engine`:
@@ -263,7 +271,7 @@ Windows 上经 koffi 轮询 Win32 `GetAsyncKeyState` 读取;macOS 上轮询 Core
 `pet_set` 让 bot 改自己的外观和习惯,每项要么直接改,要么先在气泡里征得对方同意、同意了才改(`src/self.ts`)。
 哪项归哪档由 `worlds.desktop-pet.selfAdjust`(「习惯」页的「自主配置权限」)定:
 
-- `default`(默认):形象和打扮(Coo 的配色和配件也是打扮)、走动多少、呼噜多久直接改;音效、大小、夜间模式、悬停按钮、对对方的称呼先征得同意;
+- `default`(默认):形象和打扮(Coo 的配色和配件也是打扮)、走动多少、呼噜多久直接改;音效、大小、气泡尺寸、字体尺寸、夜间模式、悬停按钮、对对方的称呼先征得同意;
 - `any`:都直接改;
 - `custom`:按 `selfAdjustCustom` 逐项定,`true` 直接改,`false` 先征得同意;
 - `off`:都不能改,`pet_quiet` 也不行。
@@ -401,6 +409,7 @@ macOS 上是 AppleScript 的 `display dialog`,Linux 上是 `zenity --question`)�
 
 - 页面发 `send` 的文字和图片作为 `desktop-pet.message` 投递;送达前在页面上排队,`now` 让它以 interrupt 立即送达,`withdraw` 撤回(需要宿主提供 `promotePending` / `withdrawPending`);World 的 `onEventsSettled` 告诉页面何时送达。
 - `pet_say` 的每一拍、`pet_ask` 的问题、两句话之间调用过的工具名记为 `desktop-pet.self` 事件,只落库不投递;`hello` 时 World 从事件库还原历史,排过队的消息放在送达的位置。`pet_say` 的图片按句柄读出字节后重新附在这条事件上,存成 `log:` 附件。页面经控制台的 `/api/blob` 取消息里的图片。
+- 页面发出的消息交给 bot 后,World 给桌宠页发 `said`(`via: 'chat'`、文字、图片数、事件游标),桌宠把它留在 Coo 旁边;撤回时发 `said-withdrawn`,桌宠关掉那条。
 - `pet_ask` 在页面上也能回答,回答后桌宠上的气泡关掉。页面还收到 Core 的运行阶段(`phase`)与暂停状态。
 - `controls.openChat` 借出后,打字气泡多一个展开钮,带着草稿打开对话页;环境提示词的 `{{pet.chat}}` 也只在这时说明对话页。
 
