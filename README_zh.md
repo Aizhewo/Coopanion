@@ -20,6 +20,7 @@
 </p>
 
 <p align="center">
+  <a href="https://coo.palailab.org">官网</a> ｜
   <a href="#安装">安装</a> ｜
   <a href="#快速上手">快速上手</a> ｜
   <a href="#日常使用">日常使用</a> ｜

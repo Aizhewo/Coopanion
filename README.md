@@ -20,6 +20,7 @@
 </p>
 
 <p align="center">
+  <a href="https://coo.palailab.org">Website</a> ｜
   <a href="#install">Install</a> ｜
   <a href="#getting-started">Getting Started</a> ｜
   <a href="#everyday-use">Everyday Use</a> ｜
