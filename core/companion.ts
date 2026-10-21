@@ -491,6 +491,7 @@ export async function main(): Promise<void> {
       // Cormini's 6/12 end a computer-use task partway through; 20/40 are the caps the desktop-pet
       // e2e harnesses give their persona
       rounds: { soft: 20, hard: 40 },
+      context: { ...base.definition.defaults().context, maxTokens: 128_000, keepRatio: 0.25 },
       companion: { telemetry: true },
     }),
     // Cormini's own build with Coo's Persona class; the workspace is snapshotted before Coo can write to it
@@ -640,5 +641,11 @@ export async function main(): Promise<void> {
   process.on('unhandledRejection', (reason) => {
     log.emit('error', '未处理的 promise 拒绝', { event: 'unhandled-rejection', err: reason });
     crash('core-rejection', reason);
+  });
+  // an exited main loop delivers nothing more; the app restarts a Core process that exits on its own
+  bot.core.runlog.onWrite((entry) => {
+    if (entry.event !== 'loop-exit') return;
+    crash('core-loop', entry.err && Object.assign(new Error(entry.err.message), entry.err));
+    void shutdown('主循环异常退出');
   });
 }
