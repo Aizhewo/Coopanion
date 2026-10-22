@@ -11,7 +11,7 @@ export const S: Partial<typeof en> = {
   roam: 'Movimento',
   roamFree: 'Spesso',
   roamCalm: 'Ogni tanto',
-  roamOff: 'Resta al suo posto',
+  roamOff: 'Resta sul posto',
   scale: 'Dimensione',
   bubbleSize: 'Dimensione dei fumetti',
   bubbleSizeHint: 'Cambia larghezza, margini e punta dei fumetti di Coo e dei tuoi; il testo mantiene la sua dimensione.',
@@ -95,5 +95,5 @@ export const S: Partial<typeof en> = {
   glow: 'Bagliore esterno',
   glowOff: 'Spento',
   glowPx: (n: number) => `${n} px`,
-  glowHint: "Quanto si estende il bagliore chiaro attorno all'animaletto quando i suoi colori somigliano allo sfondo; tutto a sinistra lo spegne.",
+  glowHint: "Quanto si estende il bagliore chiaro attorno all'animaletto quando i colori di Coo somigliano allo sfondo; tutto a sinistra lo spegne.",
 };
