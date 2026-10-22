@@ -54,8 +54,8 @@ const PERMISSION_TIMEOUT_MS = 60_000;
 export interface CuaOptions {
   /** The live `worlds.desktop-pet.cua` section, read at each use. */
   cfg: () => CuaConfig;
-  /** Names the bot in the permission question. */
-  botName?: string;
+  /** Names the bot in the permission question; read at each question. */
+  botName?: () => string;
   /**
    * Asks the person a yes/no question about using the computer, with the two buttons' words.
    * null: this way of asking is not available right now, and the system dialog asks instead.
@@ -265,7 +265,7 @@ export class Cua {
   }
 
   private get who(): string {
-    return this.opts.botName || 'bot';
+    return this.opts.botName?.() || 'bot';
   }
 
   private async ask(question: string): Promise<Answer> {
