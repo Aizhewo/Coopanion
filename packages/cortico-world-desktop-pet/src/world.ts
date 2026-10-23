@@ -329,6 +329,8 @@ export class DesktopPetWorld implements World {
   private voiceGeneration = 0;
   private voiceStopping: Promise<void> | null = null;
   private voiceEnabled = false;
+  /** `cua.enabled` as syncPrefs last saw it: switching it off ends the engine process. */
+  private cuaSeen = false;
   /** The person asked to send what was heard now, without waiting for the pause that ends a sentence. */
   private committing = false;
   private readonly segmenter: Segmenter;
@@ -626,6 +628,7 @@ export class DesktopPetWorld implements World {
       log: host.log,
       spawnImpl: this.opts.spawnSystemRecognizer,
     });
+    this.cuaSeen = this.cfg.cua.enabled;
     if (this.cfg.asr.enabled) void this.startVoiceBackend();
     await this.syncHotkey();
     this.prefsKey = this.prefsSignature();
@@ -912,6 +915,9 @@ export class DesktopPetWorld implements World {
     else if (this.cfg.asr.enabled && this.runningEngine === 'system' && this.system?.languageChanged) void this.startVoiceBackend();
     // FunASR and Whisper load the model for one language and thread count
     else if (this.cfg.asr.enabled && this.runningEngine && this.runningEngine !== 'system' && this.sherpa(this.runningEngine)?.configChanged) void this.startVoiceBackend();
+    // computer use switched off ends the engine process; the next call after it is switched on starts another
+    if (this.cuaSeen && !this.cfg.cua.enabled) void this.cua.switchedOff();
+    this.cuaSeen = this.cfg.cua.enabled;
     void this.syncHotkey();
     // the person changed what a quiet holds back: theirs wins
     if (this.quiet && (this.cfg.sound !== this.quiet.base.sound || this.cfg.roam !== this.quiet.base.roam)) this.endQuiet();
