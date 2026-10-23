@@ -67,6 +67,8 @@ export interface UsageAggregate {
   timezone?: string | null;
   /** 首末桶之间连续,没有调用的桶也在。 */
   series?: UsagePoint[];
+  /** 逐日的输入加输出 token 合计；请求带 `dailyTokenDays` 时才有，窗口内没有记录时为空。 */
+  dailyTokens?: UsageDailyTokens[];
   /** `usage` 未挂载时为 null。 */
   totals?: UsageGroupStat | null;
   byRole?: UsageGroupStat[];
@@ -77,7 +79,13 @@ export interface UsageAggregate {
   failed?: UsageAccum;
 }
 
-/** 图上纵轴画的是什么。`calls` 只出现在下面那张调用图。 */
+/** 一天的 token 合计，`day` 是部署时区的 `YYYY-MM-DD`。 */
+export interface UsageDailyTokens {
+  day: string;
+  tokens: number;
+}
+
+/** 图上纵轴画的是什么。 */
 export type UsageMetric = 'cost' | 'tokens' | 'calls';
 
 /** 可拆分的三个维度。优先级（嵌套序）恒为 类型 > 角色 > 模型。 */
@@ -98,7 +106,7 @@ export interface UsageCompPart {
  */
 export type UsageComposite = UsageCompPart[];
 
-/** 拆分维度的勾选状态。调用图没有 `type` 档，所以逐个可选。 */
+/** 拆分维度的勾选状态。调用次数没有 `type` 档，所以逐个可选。 */
 export type UsageDimFlags = Partial<Record<UsageDim, boolean>>;
 
 /** 颜色解析器：把主题 token（`chart-1` / `chart-hit`）解析成一个具体颜色。 */
