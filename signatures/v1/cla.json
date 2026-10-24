@@ -1,3 +1,12 @@
 {
-   "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "Aizhewo",
+      "id": 302128622,
+      "comment_id": 6386049305,
+      "created_at": "2026-10-24T15:31:09Z",
+      "repoId": 1432251037,
+      "pullRequestNo": 1
+    }
+  ]
 }
