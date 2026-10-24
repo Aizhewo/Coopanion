@@ -194,6 +194,8 @@ public class OverlayService extends Service {
         params.y = dp(120);
         windowManager.addView(overlay, params);
         loadPetPage();
+        // Core may need a few seconds to finish booting after a one-tap launch.
+        mainHandler.postDelayed(this::loadPetPage, 5000);
     }
 
     private class OverlayInputBridge {
@@ -261,6 +263,8 @@ public class OverlayService extends Service {
             webView = null;
         }
         overlay = null;
+        // If this app started Core, closing the floating service also stops that managed process.
+        TermuxCommands.runScript(this, "stop-core.sh");
         super.onDestroy();
     }
 
