@@ -46,6 +46,30 @@ export function phaseLabel(ui: WebUi, phase: RunPhase | null): string | null {
   return parts.join(' · ');
 }
 
+export interface ConnectionButton {
+  el: HTMLButtonElement;
+  render(st: StatusSnapshot | null): void;
+}
+
+/** 当前模型供应商:名字与模型,悬停看模块与地址;点击打开它在「模型供应商」里的设置,没有选中的就打开列表。 */
+export function createConnectionButton(ui: WebUi, open: (name: string | null) => void): ConnectionButton {
+  let name: string | null = null;
+  const el = ui.h('button', 'live-connection');
+  el.type = 'button';
+  el.addEventListener('click', () => open(name));
+  const value = ui.h('span', 'live-connection-value');
+  el.append(ui.h('span', 'live-connection-label', S.currentProvider), value);
+  return {
+    el,
+    render(st) {
+      const conn = st?.modelConnection;
+      name = conn?.name ?? null;
+      value.textContent = conn ? `${conn.name} · ${conn.model ?? '-'}` : S.noProvider;
+      el.title = conn ? `${conn.moduleTitle} (${conn.module})\n${conn.baseUrl}` : S.noProvider;
+    },
+  };
+}
+
 export interface StatusBand {
   el: HTMLElement;
   /** `main` 是会话统计里主会话那一项(累计输入与缓存命中率取自它);还没有时省略那两项。 */
