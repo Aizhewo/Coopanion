@@ -259,10 +259,6 @@
   .data-extra { color: var(--ink-dim); font: 11.5px var(--mono); word-break: break-all; }
 
 
-  .liveband {
-    flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 12px 30px; border-bottom: 1px solid var(--line);
-  }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .chip { font: 11.5px/1 var(--sans); color: var(--ink-soft); background: var(--sheet-2); border: 1px solid var(--line); border-radius: 20px; padding: 5px 11px; white-space: nowrap; }
   .chip b { color: var(--ink); font-weight: 600; }
@@ -1284,16 +1280,11 @@
   .world { padding: 10px 14px; border: 0; border-radius: 15px 4px 15px 15px; }
   .monolog { border: 0; border-radius: 4px 15px 15px 15px; }
   .liveband {
-    width: 100%;
-    max-width: calc(var(--content-width) + var(--page-gutter) + var(--page-gutter));
-    margin-inline: auto;
-    padding: 12px var(--page-gutter) 10px;
-    border-color: var(--border);
-    align-items: stretch;
-    flex-direction: column;
-    gap: 7px;
+    flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 7px;
+    padding: 12px var(--page-gutter) 10px; overflow: hidden; scrollbar-gutter: stable both-edges;
   }
-  .live-summary { display: flex; min-width: 0; align-items: center; gap: 10px; }
+  .liveband > * { width: 100%; max-width: var(--content-width); margin-inline: auto; }
+  .live-summary { display: flex; flex-wrap: wrap; min-width: 0; align-items: center; gap: 6px 10px; }
   .live-summary .grow { flex: 1; }
   .live-summary .chips { gap: 2px 10px; }
   .live-summary .chip,
@@ -1314,19 +1305,13 @@
   .prompt-input-host { width: min(100%, var(--conversation-width)); margin: 18px auto 0; }
   .prompt-input-host textarea:focus-visible { outline: none; }
   .liveview > .prompt-input-host {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    z-index: 12;
-    width: min(
-      calc(100% - 64px + var(--radius-composer) + var(--radius-composer)),
-      calc(var(--conversation-width) + var(--radius-composer) + var(--radius-composer))
-    );
-    margin: 0;
-    padding: 10px 0 18px;
-    transform: translateX(calc(-50% - 5px));
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 12;
+    width: auto; margin: 0; padding: 10px calc(var(--page-gutter) + 10px) 18px;
+    background: linear-gradient(to top, var(--paper) 55%, transparent);
+    pointer-events: none;
   }
-  .liveview > .prompt-input-host > form { position: relative; background: color-mix(in srgb, var(--surface) 94%, transparent); }
+  .liveview > .prompt-input-host > * { max-width: var(--content-width); margin-inline: auto; pointer-events: auto; }
+  .liveview > .prompt-input-host > form { position: relative; background: var(--surface); }
   .liveview .tlscroll { padding-bottom: 154px; }
 
   /* Provider 页:左侧次级菜单是供应模块清单,右侧是嵌入的控制台页宿主(页头 + 面板槽)。
@@ -1510,7 +1495,31 @@
 .connection-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}.connection-actions .grow{flex:1}
 @media(max-width:760px){.connection-hub{grid-template-columns:1fr}.connection-index{position:static;max-height:320px}.connection-cards{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}}
 
-.live-summary { flex-wrap:wrap; }
+.live-summary > .chips:first-child { flex: 0 1 auto; min-width: 0; }
+.live-summary-right { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; margin-left: auto; }
+.live-summary-right > .pill, .live-summary-right > .live-cost { flex: none; }
+.live-summary-right > .live-connection { flex: 0 1 auto; max-width: none; }
+.live-sessions { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.live-cost[hidden] { display: none; }
+.live-cost { flex: none; padding: 0; border: 0; background: none; cursor: pointer; font: 600 11.5px/1 var(--sans); color: var(--ink-soft); white-space: nowrap; }
+.live-cost:hover { color: var(--accent); }
+.live-cost:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+/* 导出诊断:与这一栏其他读数同字号的文字按钮,图标随字号缩小 */
+.live-sessions > .live-export { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; cursor: pointer; font: 11.5px/1 var(--sans); color: var(--ink-soft); white-space: nowrap; }
+.live-sessions > .live-export .icon { width: 13px; height: 13px; }
+.live-sessions > .live-export:hover { color: var(--accent); }
+.live-sessions > .live-export:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.live-sessions-label { flex: none; font: 11.5px/1 var(--sans); color: var(--ink-dim); }
+.liveband .live-sessions > .sesscards { flex: 1 1 auto; width: auto; min-width: 0; }
+/* 会话卡只占一行、不滚动:放不下的已结束会话不画,进行中的收进「+N」的浮窗 */
+.liveband .live-sessions > .sesscards { overflow: hidden; padding-bottom: 0; }
+.liveband .sesscards > .sesscard, .sessmore { flex: none; }
+.sessmore { display: inline-flex; }
+.sessmore-btn { font-weight: 600; }
+.sesspop { position: fixed; z-index: 40; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px; background: var(--sheet); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px color-mix(in srgb, #000 16%, transparent); }
+.sesspop[hidden] { display: none; }
+.sesspop > .sesscard { justify-content: flex-start; }
+@container (max-width: 600px) { .live-connection-label { display: none; } }
 .live-connection { display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:48%; background:none; border:0; color:var(--ink-soft); cursor:pointer; padding:0; font:11.5px/1 var(--sans); }
 .live-connection-label { flex-shrink:0; }
 .live-connection-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:4px 8px; border-radius:7px; background:var(--hover); border:1px solid var(--border); color:var(--ink-blue); font-weight:600; }
@@ -1529,7 +1538,6 @@
 .featureslot > .featureintro + .sheet { margin-top:0; }
 .providerchrome { padding-bottom:0; }
 .providerchrome + .panelslot { padding-top:24px; }
-.coreview > .pagehead { padding-bottom:16px; }
 .connection-index { padding-top:0; top:100px; }
 .connection-detail > div > div:first-child > .sheet:first-child { padding-top:0; }
 .connection-hub .btn { border:1px solid var(--border-strong); }
@@ -1994,3 +2002,30 @@ button.extension-stat:hover { background: color-mix(in srgb, var(--accent) 12%, 
   .storageview .strow .stinfo { grid-column: 1 / -1; }
   .storageview .strow .ststat { text-align: left; }
 }
+
+/* 运行诊断:筛选是一行 32px 高的控件,动作按钮靠右 */
+.coreview .core-filters { flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.coreview .core-filters .field { height: 32px; min-height: 32px; padding-top: 0; padding-bottom: 0; font-size: 13px; }
+.coreview .core-filters .core-filter-source { width: 240px; }
+.coreview .core-filters .core-filter-run { width: 230px; }
+.coreview .core-filters .core-filter-level { width: 110px; }
+.coreview .core-filters .core-filter-text { flex: 1 1 140px; min-width: 120px; max-width: 240px; }
+.coreview .core-filters .core-filter-round { width: 80px; }
+.coreview .core-filters .grow { flex: 1 0 0; }
+.coreview .core-filters > .btn { flex: none; }
+/* 运行:读数栏与控制台顶栏同一个样子,下面会话、事件两节 */
+.coreview .core-run > .core-summary { padding-bottom: 14px; }
+.coreview .core-run > .sheet { margin-top: 0; }
+.coreview :is(.configview, .storageview) > :first-child > .sheet:first-child { padding-top: 0; }
+.coreview .core-run .sheet .sh-desc { max-width: none; }
+/* 表格翻页:与扩展页一样,计数在左,每页条数与翻页键在右 */
+.coreview .core-pager { flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; min-height: 32px; font-size: 12px; color: var(--ink-dim); }
+.coreview .core-pager-size { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.coreview .core-pager-size select.field { width: auto; min-width: 72px; height: 30px; min-height: 30px; padding-top: 0; padding-bottom: 0; font-size: 12.5px; }
+.coreview .core-pager-of { font: 12px var(--mono); color: var(--ink-soft); min-width: 44px; text-align: center; }
+.coreview .core-pager > [hidden] { display: none; }
+/* 页内栏目条右端的动作:与控制台顶栏的导出同样的小号文字按钮 */
+.pagetabs-action { flex: none; align-self: center; display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; cursor: pointer; font: 12.5px/1 var(--sans); color: var(--ink-soft); white-space: nowrap; }
+.pagetabs-action .icon { width: 14px; height: 14px; }
+.pagetabs-action:hover { color: var(--accent); }
+.pagetabs-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
