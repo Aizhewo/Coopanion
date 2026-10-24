@@ -130,7 +130,7 @@ public class OverlayService extends Service {
                     downY = e.getRawY();
                     return true;
                 } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                    params.x = startX + (int)(e.getRawX() - downX);
+                    params.x = startX - (int)(e.getRawX() - downX);
                     params.y = startY + (int)(e.getRawY() - downY);
                     windowManager.updateViewLayout(overlay, params);
                     return true;
