@@ -16,6 +16,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
+    private static final int REQUEST_TERMUX_COMMAND_PERMISSION = 7301;
+    private static final String TERMUX_COMMAND_PERMISSION = "com.termux.permission.RUN_COMMAND";
     private TextView status;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -73,12 +75,14 @@ public class MainActivity extends Activity {
                 updateStatus();
                 return;
             }
-            if (TermuxCommands.runScript(this, "start-core.sh")) {
-                Toast.makeText(this, "已请求 Termux 启动 Core，正在打开桌宠…", Toast.LENGTH_LONG).show();
-                handler.postDelayed(this::startOverlay, 2500);
-            } else {
-                Toast.makeText(this, "无法调用 Termux。请检查 Termux 安装及授权设置。", Toast.LENGTH_LONG).show();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                    && checkSelfPermission(TERMUX_COMMAND_PERMISSION)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] { TERMUX_COMMAND_PERMISSION },
+                        REQUEST_TERMUX_COMMAND_PERMISSION);
+                return;
             }
+            launchCoreAndOverlay();
         });
         root.addView(autoStart, fullWidth());
 
@@ -106,6 +110,27 @@ public class MainActivity extends Activity {
         updateStatus();
     }
 
+    private void launchCoreAndOverlay() {
+        if (TermuxCommands.runScript(this, "start-core.sh")) {
+            Toast.makeText(this, "已请求 Termux 启动 Core，正在打开桌宠…", Toast.LENGTH_LONG).show();
+            handler.postDelayed(this::startOverlay, 2500);
+        } else {
+            Toast.makeText(this, "无法调用 Termux。请检查 Termux 安装及授权设置。", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_TERMUX_COMMAND_PERMISSION) {
+            if (grantResults.length > 0
+                    && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Termux 命令权限已授予，再点一次“一键启动”即可。", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "未获得 Termux 命令权限。请在 Coopanion 应用信息的权限页面允许“在 Termux 环境中运行命令”。", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
     private void startOverlay() {
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "请先授予悬浮窗权限", Toast.LENGTH_LONG).show();
