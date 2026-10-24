@@ -10,6 +10,8 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -20,6 +22,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.JavascriptInterface;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -31,6 +35,8 @@ public class OverlayService extends Service {
     private View overlay;
     private WindowManager.LayoutParams params;
     private WebView webView;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private boolean inputFocused = false;
 
     @Override
     public void onCreate() {
@@ -148,6 +154,7 @@ public class OverlayService extends Service {
         settings.setAllowFileAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         webView.setWebChromeClient(new WebChromeClient());
+        webView.addJavascriptInterface(new OverlayInputBridge(), "AndroidOverlay");
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
                 String css = "document.documentElement.style.background='transparent';" +
@@ -160,6 +167,13 @@ public class OverlayService extends Service {
                     "document.querySelectorAll('.floor').forEach(e=>e.style.display='none');" +
                     "document.querySelectorAll('.stage').forEach(e=>{e.style.background='transparent';e.style.minHeight='0';e.style.height='auto';});";
                 view.evaluateJavascript(css, null);
+                String inputHooks =
+                    "(()=>{" +
+                    "const notify=(focused)=>{try{AndroidOverlay.setInputFocus(focused);}catch(e){}};" +
+                    "document.addEventListener('focusin',e=>{if(e.target.matches('input,textarea,[contenteditable=true],[role=textbox]'))notify(true);},true);" +
+                    "document.addEventListener('focusout',e=>{if(e.target.matches('input,textarea,[contenteditable=true],[role=textbox]'))setTimeout(()=>{const a=document.activeElement;notify(!!(a&&a.matches('input,textarea,[contenteditable=true],[role=textbox]')));},120);},true);" +
+                    "})();";
+                view.evaluateJavascript(inputHooks, null);
             }
         });
         frame.addView(bar, new LinearLayout.LayoutParams(
@@ -180,6 +194,36 @@ public class OverlayService extends Service {
         params.y = dp(120);
         windowManager.addView(overlay, params);
         loadPetPage();
+    }
+
+    private class OverlayInputBridge {
+        @JavascriptInterface
+        public void setInputFocus(boolean focused) {
+            mainHandler.post(() -> setOverlayInputFocus(focused));
+        }
+    }
+
+    private void setOverlayInputFocus(boolean focused) {
+        if (windowManager == null || overlay == null || params == null || webView == null) return;
+        if (inputFocused == focused) return;
+        inputFocused = focused;
+        if (focused) {
+            params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            windowManager.updateViewLayout(overlay, params);
+            webView.requestFocus();
+            webView.requestFocusFromTouch();
+            mainHandler.postDelayed(() -> {
+                if (inputFocused && webView != null) {
+                    InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT);
+                }
+            }, 120);
+        } else {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null && webView != null) imm.hideSoftInputFromWindow(webView.getWindowToken(), 0);
+            params.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            windowManager.updateViewLayout(overlay, params);
+        }
     }
 
     private void resizeOverlay(int deltaDp) {
