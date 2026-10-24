@@ -83,24 +83,41 @@ public class OverlayService extends Service {
         TextView label = new TextView(this);
         label.setText("🐳 鲸鲸桌宠");
         label.setTextColor(Color.WHITE);
-        label.setTextSize(13);
-        bar.addView(label, new LinearLayout.LayoutParams(0, dp(36), 1));
+        label.setTextSize(12);
+        bar.addView(label, new LinearLayout.LayoutParams(0, dp(34), 1));
 
         Button retry = new Button(this);
         retry.setText("↻");
         retry.setTextSize(14);
-        retry.setMinWidth(dp(40));
+        retry.setMinWidth(dp(30));
         retry.setPadding(0, 0, 0, 0);
         retry.setOnClickListener(v -> loadPetPage());
-        bar.addView(retry, new LinearLayout.LayoutParams(dp(42), dp(36)));
+        bar.addView(retry, new LinearLayout.LayoutParams(dp(32), dp(34)));
+
+
+        Button smaller = new Button(this);
+        smaller.setText("−");
+        smaller.setTextSize(16);
+        smaller.setMinWidth(dp(30));
+        smaller.setPadding(0, 0, 0, 0);
+        smaller.setOnClickListener(v -> resizeOverlay(-30));
+        bar.addView(smaller, new LinearLayout.LayoutParams(dp(30), dp(34)));
+
+        Button larger = new Button(this);
+        larger.setText("+");
+        larger.setTextSize(14);
+        larger.setMinWidth(dp(30));
+        larger.setPadding(0, 0, 0, 0);
+        larger.setOnClickListener(v -> resizeOverlay(30));
+        bar.addView(larger, new LinearLayout.LayoutParams(dp(30), dp(34)));
 
         Button close = new Button(this);
         close.setText("×");
         close.setTextSize(18);
-        close.setMinWidth(dp(40));
+        close.setMinWidth(dp(30));
         close.setPadding(0, 0, 0, 0);
         close.setOnClickListener(v -> stopSelf());
-        bar.addView(close, new LinearLayout.LayoutParams(dp(42), dp(36)));
+        bar.addView(close, new LinearLayout.LayoutParams(dp(30), dp(34)));
 
         bar.setOnTouchListener(new View.OnTouchListener() {
             private int startX, startY;
@@ -136,29 +153,42 @@ public class OverlayService extends Service {
                 String css = "document.documentElement.style.background='transparent';" +
                     "document.body.style.background='transparent';" +
                     "document.body.style.margin='0';" +
+                    "document.body.style.overflow='hidden';" +
+                    "document.body.style.width='100%';" +
+                    "document.body.style.height='100%';" +
+                    "document.body.style.zoom='0.72';" +
                     "document.querySelectorAll('.floor').forEach(e=>e.style.display='none');" +
-                    "document.querySelectorAll('.stage').forEach(e=>{e.style.background='transparent';e.style.minHeight='240px';});";
+                    "document.querySelectorAll('.stage').forEach(e=>{e.style.background='transparent';e.style.minHeight='0';e.style.height='auto';});";
                 view.evaluateJavascript(css, null);
             }
         });
         frame.addView(bar, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(42)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
         frame.addView(webView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
 
         overlay = frame;
         params = new WindowManager.LayoutParams(
-                dp(290), dp(340),
+                dp(200), dp(220),
                 Build.VERSION.SDK_INT >= 26
                         ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                         : WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.END;
         params.x = dp(12);
         params.y = dp(120);
         windowManager.addView(overlay, params);
         loadPetPage();
+    }
+
+    private void resizeOverlay(int deltaDp) {
+        if (windowManager == null || overlay == null || params == null) return;
+        int minWidth = dp(150), maxWidth = dp(300);
+        int minHeight = dp(160), maxHeight = dp(360);
+        params.width = Math.max(minWidth, Math.min(maxWidth, params.width + dp(deltaDp)));
+        params.height = Math.max(minHeight, Math.min(maxHeight, params.height + dp(deltaDp)));
+        windowManager.updateViewLayout(overlay, params);
     }
 
     private void loadPetPage() {
