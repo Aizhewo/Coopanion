@@ -76,7 +76,6 @@ public class MainActivity extends Activity {
             if (TermuxCommands.runScript(this, "start-core.sh")) {
                 Toast.makeText(this, "已请求 Termux 启动 Core，正在打开桌宠…", Toast.LENGTH_LONG).show();
                 handler.postDelayed(this::startOverlay, 2500);
-                handler.postDelayed(this::reloadOverlay, 6500);
             } else {
                 Toast.makeText(this, "无法调用 Termux。请检查 Termux 安装及授权设置。", Toast.LENGTH_LONG).show();
             }
@@ -115,10 +114,6 @@ public class MainActivity extends Activity {
         Intent i = new Intent(this, OverlayService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i);
         else startService(i);
-    }
-
-    private void reloadOverlay() {
-        sendBroadcast(new Intent("dev.coopanion.androidpet.RELOAD_PET"));
     }
 
     private LinearLayout.LayoutParams fullWidth() {
